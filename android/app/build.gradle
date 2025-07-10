@@ -32,7 +32,7 @@ if (keystoreFile.exists()) {
 android {
     namespace = "app.vercel.praisetech.vendorpal"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         coreLibraryDesugaringEnabled true // Enable desugaring for Java 8+ APIs
@@ -67,6 +67,10 @@ android {
             signingConfig = signingConfigs.release
 
         }
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
 

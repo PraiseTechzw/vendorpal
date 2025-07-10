@@ -12,6 +12,7 @@ import 'package:vendorpal/widget/home/sales_focust.dart';
 import 'package:vendorpal/widget/home/sales_overview_widget.dart';
 import 'package:vendorpal/widget/home/stock_overview_widget.dart';
 import 'package:vendorpal/widget/home/pie_chart.dart';
+import 'package:vendorpal/constants/business_type_store.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -244,86 +245,97 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: const MyDrawer(),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        child: FadeTransition(
-          opacity: _controller,
-          child: CustomScrollView(
-            slivers: [
-              _buildAppBar(),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _isLoading
-                      ? Center(
-                          child: Lottie.asset(
-                            'assets/animations/loading.json',
-                            width: 150,
-                            height: 150,
-                          ),
-                        )
-                      : _totalSales == 0 && _totalStock == 0
-                          ? FirstTimeUserPrompt()
-                          // ignore: prefer_const_constructors
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SalesOverview(
-                                  salesPageController: _salesPageController,
-                                  dailySales:
-                                      _dailySales, // Use the fetched daily sales value
-                                  weeklySales:
-                                      _weeklySales, // Use the fetched weekly sales value
-                                  monthlySales:
-                                      _monthlySales, // Use the fetched monthly sales value
-                                  dailyProfits:
-                                      _dailyProfits, // Use the fetched daily profits value
-                                  weeklyProfits:
-                                      _weeklyProfits, // Use the fetched weekly profits value
-                                  monthlyProfits:
-                                      _monthlyProfits, // Use the fetched monthly profits value
-                                  dailyQuantitySold:
-                                      _dailyQuantitySold, // Use the fetched daily quantity sold value
-                                  weeklyQuantitySold:
-                                      _weeklyQuantitySold, // Use the fetched weekly quantity sold value
-                                  monthlyQuantitySold:
-                                      _monthlyQuantitySold, // Use the fetched monthly quantity sold value
+    return FutureBuilder<bool>(
+      future: isOnboardingComplete(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.data == false) {
+          return FirstTimeUserPrompt();
+        }
+        return Scaffold(
+          drawer: const MyDrawer(),
+          body: RefreshIndicator(
+            onRefresh: _onRefresh,
+            child: FadeTransition(
+              opacity: _controller,
+              child: CustomScrollView(
+                slivers: [
+                  _buildAppBar(),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _isLoading
+                          ? Center(
+                              child: Lottie.asset(
+                                'assets/animations/loading.json',
+                                width: 150,
+                                height: 150,
+                              ),
+                            )
+                          : (selectedBusinessType == null || (_totalSales == 0 && _totalStock == 0))
+                              ? FirstTimeUserPrompt()
+                              // ignore: prefer_const_constructors
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SalesOverview(
+                                      salesPageController: _salesPageController,
+                                      dailySales:
+                                          _dailySales, // Use the fetched daily sales value
+                                      weeklySales:
+                                          _weeklySales, // Use the fetched weekly sales value
+                                      monthlySales:
+                                          _monthlySales, // Use the fetched monthly sales value
+                                      dailyProfits:
+                                          _dailyProfits, // Use the fetched daily profits value
+                                      weeklyProfits:
+                                          _weeklyProfits, // Use the fetched weekly profits value
+                                      monthlyProfits:
+                                          _monthlyProfits, // Use the fetched monthly profits value
+                                      dailyQuantitySold:
+                                          _dailyQuantitySold, // Use the fetched daily quantity sold value
+                                      weeklyQuantitySold:
+                                          _weeklyQuantitySold, // Use the fetched weekly quantity sold value
+                                      monthlyQuantitySold:
+                                          _monthlyQuantitySold, // Use the fetched monthly quantity sold value
+                                    ),
+                                    const SizedBox(height: 32),
+                                    BarChartWidget(
+                                      weeklySalesFuture:
+                                          _isarService.getWeeklySales(),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    StockOverview(
+                                      stockPageController: _stockPageController,
+                                      totalStock: _totalStock,
+                                      lowStockItemsCount: _lowStockItems.length,
+                                      lastMonthStock: _lastMonthStock,
+                                      currentMonthStock: _currentMonthStock,
+                                      yearToDateStock: _yearToDateStock,
+                                    ),
+                                    const SizedBox(height: 32),
+                                    PieChartWidget(
+                                      salesDistributionFuture:
+                                          _isarService.getSalesDistribution(),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    SalesForecast(
+                                      isarService: IsarService(),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    LowStockItems(lowStockItems: _lowStockItems),
+                                  ],
                                 ),
-                                const SizedBox(height: 32),
-                                BarChartWidget(
-                                  weeklySalesFuture:
-                                      _isarService.getWeeklySales(),
-                                ),
-                                const SizedBox(height: 32),
-                                StockOverview(
-                                  stockPageController: _stockPageController,
-                                  totalStock: _totalStock,
-                                  lowStockItemsCount: _lowStockItems.length,
-                                  lastMonthStock: _lastMonthStock,
-                                  currentMonthStock: _currentMonthStock,
-                                  yearToDateStock: _yearToDateStock,
-                                ),
-                                const SizedBox(height: 32),
-                                PieChartWidget(
-                                  salesDistributionFuture:
-                                      _isarService.getSalesDistribution(),
-                                ),
-                                const SizedBox(height: 32),
-                                SalesForecast(
-                                  isarService: IsarService(),
-                                ),
-                                const SizedBox(height: 32),
-                                LowStockItems(lowStockItems: _lowStockItems),
-                              ],
-                            ),
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

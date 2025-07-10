@@ -60,6 +60,7 @@ dependencies:
   charts_flutter: ^0.12.0
   social_media_buttons: ^1.0.0
   carousel_slider: ^5.0.0
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -91,6 +92,7 @@ flutter:
     - assets/animations/search.json
     - assets/animations/dashboard.json
     - assets/animations/w.json
+    - assets/animations/welcome.json
 
     - assets/images/a.png
     - assets/images/logo1.png

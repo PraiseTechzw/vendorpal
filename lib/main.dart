@@ -7,6 +7,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vendorpal/databases/database.dart';
 import 'package:vendorpal/pages/main_page.dart';
 import 'package:vendorpal/themes/theme.dart';
+import 'package:vendorpal/constants/business_type_store.dart';
+import 'package:vendorpal/modals/business_type.dart';
+import 'package:vendorpal/widget/home/first_time_user.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -17,6 +20,9 @@ Future<void> main() async {
   // Initialize the Isar database
   final isarService = IsarService();
   await isarService.initializeDB();
+
+  // Load business type selection before app starts
+  await loadSelectedBusinessType(businessTypes);
 
   // Initialize notifications
   await initializeNotifications();
@@ -55,24 +61,39 @@ Future<void> initializeNotifications() async {
   );
 }
 
-class VendorPalApp extends StatelessWidget {
+class VendorPalApp extends StatefulWidget {
   final IsarService isarService;
 
   const VendorPalApp({Key? key, required this.isarService}) : super(key: key);
 
   @override
+  State<VendorPalApp> createState() => _VendorPalAppState();
+}
+
+class _VendorPalAppState extends State<VendorPalApp> {
+  @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return ChangeNotifierProvider.value(
-      value: isarService,
+      value: widget.isarService,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'VendorPal',
         theme: lightTheme(),
         darkTheme: darkTheme(),
         themeMode: themeNotifier.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: MainScreen(),
+        home: FutureBuilder<bool>(
+          future: isOnboardingComplete(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return snapshot.data == false
+                ? FirstTimeUserPrompt()
+                : MainScreen();
+          },
+        ),
       ),
     );
   }
