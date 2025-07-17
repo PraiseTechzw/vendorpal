@@ -7,6 +7,16 @@ import 'package:vendorpal/pages/report/reports.dart';
 import 'package:vendorpal/pages/sales_screen.dart';
 import 'package:vendorpal/pages/stocks/stock_screen.dart';
 import 'package:vendorpal/themes/theme.dart';
+import 'package:vendorpal/pages/setting/settings.dart';
+
+class ExpensesScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text('Expenses Screen (Coming Soon)', style: TextStyle(fontSize: 20, color: Colors.deepPurple)),
+    );
+  }
+}
 
 class MainScreen extends StatefulWidget {
   @override
@@ -21,6 +31,8 @@ class _MainScreenState extends State<MainScreen> {
     const StockScreen(),
     const SalesScreen(),
     const ReportScreen(),
+    ExpensesScreen(),
+    Settings(), // Use the correct class name
   ];
 
   void _onItemTapped(int index) {
@@ -87,6 +99,18 @@ class _MainScreenState extends State<MainScreen> {
                   text: 'Reports',
                   iconColor: Colors.purple,
                   textStyle: TextStyle(color: Colors.purple),
+                ),
+                GButton(
+                  icon: Icons.money,
+                  text: 'Expenses',
+                  iconColor: Colors.orange,
+                  textStyle: TextStyle(color: Colors.orange),
+                ),
+                GButton(
+                  icon: Icons.settings,
+                  text: 'Settings',
+                  iconColor: Colors.grey,
+                  textStyle: TextStyle(color: Colors.grey),
                 ),
               ],
               selectedIndex: _selectedIndex,

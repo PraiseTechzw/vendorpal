@@ -61,6 +61,7 @@ dependencies:
   social_media_buttons: ^1.0.0
   carousel_slider: ^5.0.0
   shared_preferences: ^2.5.3
+  percent_indicator: ^4.2.5
 
 dev_dependencies:
   flutter_test:
@@ -93,9 +94,11 @@ flutter:
     - assets/animations/dashboard.json
     - assets/animations/w.json
     - assets/animations/welcome.json
-
+    - assets/images/
     - assets/images/a.png
     - assets/images/logo1.png
+
+
 
   #   - images/a_dot_ham.jpeg
 

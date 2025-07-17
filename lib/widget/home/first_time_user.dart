@@ -4,8 +4,12 @@ import 'package:vendorpal/widget/product_form_widget.dart';
 import 'package:vendorpal/widget/business_type_selector.dart';
 import 'package:vendorpal/modals/business_type.dart';
 import 'package:vendorpal/constants/business_type_store.dart';
+import 'dart:async';
+import 'dart:ui';
 
 class FirstTimeUserPrompt extends StatefulWidget {
+  final VoidCallback? onComplete;
+  const FirstTimeUserPrompt({Key? key, this.onComplete}) : super(key: key);
   @override
   State<FirstTimeUserPrompt> createState() => _FirstTimeUserPromptState();
 }
@@ -16,6 +20,17 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
   bool _onboardingComplete = false;
   late AnimationController _buttonAnimController;
   late Animation<double> _buttonScaleAnim;
+  bool _showConfetti = false;
+
+  // Animated gradient state
+  int _gradientIndex = 0;
+  late Timer _gradientTimer;
+  final List<List<Color>> _gradients = [
+    [Color(0xFFB388FF), Color(0xFF8C9EFF), Color(0xFF80D8FF)],
+    [Color(0xFFE1BEE7), Color(0xFFB3E5FC), Color(0xFFD1C4E9)],
+    [Color(0xFFF3EFFF), Color(0xFFE1D8FF), Color(0xFFD1C4E9)],
+    [Color(0xFFB2EBF2), Color(0xFFB388FF), Color(0xFFD1C4E9)],
+  ];
 
   // Mock state for basic setup
   String? _currency;
@@ -23,8 +38,24 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
   bool _prefersDark = false;
   bool _loadSampleData = false;
 
-  final List<String> _currencies = ['USD', 'EUR', 'ZAR', 'NGN', 'ZWL'];
-  final List<String> _locations = ['Zimbabwe', 'South Africa', 'Nigeria', 'Other'];
+  // Replace _currencies and _locations with richer data for icons/symbols
+  final List<Map<String, String>> _currencies = [
+    {'code': 'USD', 'symbol': '\$'}, // $
+    {'code': 'EUR', 'symbol': '€'}, // €
+    {'code': 'ZAR', 'symbol': 'R'},
+    {'code': 'NGN', 'symbol': '₦'}, // ₦
+    {'code': 'ZWL', 'symbol': '\$'}, // $
+  ];
+
+  final List<Map<String, String>> _locations = [
+    {'country': 'Zimbabwe', 'flag': '🇿🇼'},
+    {'country': 'South Africa', 'flag': '🇿🇦'},
+    {'country': 'Nigeria', 'flag': '🇳🇬'},
+    {'country': 'Other', 'flag': '🌍'},
+  ];
+
+  String? _selectedTypeId;
+  bool _isSavingType = false;
 
   @override
   void initState() {
@@ -39,11 +70,18 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
       parent: _buttonAnimController,
       curve: Curves.easeInOut,
     );
+    // Start animated gradient timer
+    _gradientTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      setState(() {
+        _gradientIndex = (_gradientIndex + 1) % _gradients.length;
+      });
+    });
   }
 
   @override
   void dispose() {
     _buttonAnimController.dispose();
+    _gradientTimer.cancel();
     super.dispose();
   }
 
@@ -58,6 +96,9 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
     if (_currentStep == 4) {
       // On last step, mark onboarding complete
       await setOnboardingComplete();
+      if (widget.onComplete != null) {
+        widget.onComplete!();
+      }
     }
   }
 
@@ -70,40 +111,48 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
   @override
   Widget build(BuildContext context) {
     if (_onboardingComplete) {
-      // Onboarding complete, show nothing or main app content
-      return const Center(child: Text('Onboarding Complete!'));
+      // Onboarding complete, let parent handle navigation
+      return const SizedBox.shrink();
     }
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: MediaQuery.of(context).size.height * 0.95,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFF3EFFF), Color(0xFFE1D8FF), Color(0xFFD1C4E9)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildStepper(),
-                const SizedBox(height: 16),
-                Expanded(child: _buildStepContent()),
-                if (_currentStep > 0)
-                  TextButton(
-                    onPressed: _prevStep,
-                    child: const Text('Back'),
-                  ),
-              ],
+    // Make onboarding fill the screen
+    return Stack(
+      children: [
+        // Background gradient
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFF3EFFF), Color(0xFFE1D8FF), Color(0xFFD1C4E9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
         ),
-      ),
+        // Onboarding content
+        SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildStepper(),
+                  const SizedBox(height: 16),
+                  // Remove Expanded here, just show the step content
+                  _buildStepContent(),
+                  if (_currentStep > 0)
+                    TextButton(
+                      onPressed: _prevStep,
+                      child: const Text('Back'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -175,20 +224,154 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
 
   // Step 1: Welcome
   Widget _buildWelcomeStep() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final isWide = MediaQuery.of(context).size.width > 600;
+    return Stack(
+      alignment: Alignment.center,
       children: [
+        // Animated gradient background
+        AnimatedContainer(
+          duration: const Duration(seconds: 2),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: _gradients[_gradientIndex],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        // Glassmorphism card with blur, border, and shadow
+        Center(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.18),
+                      blurRadius: 40,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 2.2,
+                  ),
+                ),
+                child: isWide
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Logo with shadow
+                          Container(
+                            margin: const EdgeInsets.only(right: 32),
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.deepPurple.withOpacity(0.18),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/images/logo1.png',
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.contain,
+                              semanticLabel: 'VendorPal Logo',
+                            ),
+                          ),
+                          // Lottie animation
+                          Lottie.asset(
+                            'assets/animations/welcome.json',
+                            repeat: true,
+                            animate: true,
+                            width: 120,
+                            height: 120,
+                          ),
+                          const SizedBox(width: 32),
+                          // Text content
+                          Expanded(child: _buildWelcomeTextAndButton()),
+                        ],
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Logo with shadow
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 18),
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.deepPurple.withOpacity(0.18),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.contain,
+                              semanticLabel: 'VendorPal Logo',
+                            ),
+                          ),
+                          // Lottie animation
         Lottie.asset(
-          'assets/animations/welcome.json',
+                            'assets/animations/welcome.json',
           repeat: true,
           animate: true,
-          width: 180,
-          height: 180,
+                            width: 140,
+                            height: 140,
+                          ),
+                          const SizedBox(height: 18),
+                          _buildWelcomeTextAndButton(),
+                        ],
+                      ),
+              ),
+            ),
+          ),
         ),
-        const SizedBox(height: 24),
+        // Mock confetti/sparkle overlay
+        if (_showConfetti)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                color: Colors.transparent,
+                child: Center(
+                  child: Lottie.asset(
+                    'assets/animations/empty_state.json', // Use an existing animation as mock confetti
+                    width: 180,
+                    height: 180,
+                    repeat: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // Extracted text/button for clarity and reuse
+  Widget _buildWelcomeTextAndButton() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         const Text(
           'Welcome to VendorPal!',
           style: TextStyle(
+            fontFamily: 'Roboto-Bold',
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Colors.deepPurpleAccent,
@@ -196,42 +379,54 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         const Text(
-          'Your smart, offline business manager. Get started in seconds!',
+          'Your smart, offline business manager.',
           style: TextStyle(
+            fontFamily: 'Roboto-Regular',
             fontSize: 18,
             color: Colors.deepPurple,
             fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 10),
         const Text(
-          'Start by selecting your business type and adding your first product. All features work offline!',
+          'Get started in seconds. All features work offline!',
           style: TextStyle(
+            fontFamily: 'Roboto-Regular',
             fontSize: 16,
-            color: Colors.black54,
+            color: Colors.black87,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 36),
+        const SizedBox(height: 32),
         ScaleTransition(
           scale: _buttonScaleAnim,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-              backgroundColor: Colors.deepPurpleAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 20),
+                backgroundColor: Colors.deepPurpleAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 8,
+                shadowColor: Colors.deepPurple.withOpacity(0.2),
+                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              elevation: 8,
-              shadowColor: Colors.deepPurple.withOpacity(0.2),
-            ),
-            onPressed: _nextStep,
-            child: const Text(
-              'Get Started',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              onPressed: () {
+                setState(() => _showConfetti = true);
+                Future.delayed(const Duration(seconds: 1), () {
+                  setState(() => _showConfetti = false);
+                  _nextStep();
+                });
+              },
+              child: const Text(
+                'Get Started',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ),
         ),
@@ -241,69 +436,211 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
 
   // Step 2: Business Type Selection
   Widget _buildBusinessTypeStep() {
-    return BusinessTypeSelector(
-      selectedBusinessTypeId: selectedBusinessType?.id,
-      onSelected: (type) async {
-        await saveSelectedBusinessType(type);
-        setState(() {});
-        Future.delayed(const Duration(milliseconds: 400), _nextStep);
-      },
+    final isWide = MediaQuery.of(context).size.width > 600;
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.45),
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.deepPurple.withOpacity(0.18),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.35),
+                width: 2.2,
+              ),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.7,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Select Your Business Type',
+                      style: TextStyle(
+                        fontFamily: 'Roboto-Bold',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurpleAccent,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 18),
+                    // Animated business type selector
+                    BusinessTypeSelector(
+                      selectedBusinessTypeId: selectedBusinessType?.id,
+                      onSelected: (type) async {
+                        await saveSelectedBusinessType(type);
+                        setState(() {
+                          _selectedTypeId = type.id;
+                        });
+                        Future.delayed(const Duration(milliseconds: 200), _nextStep);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    // Remove the Continue button here to avoid duplicate
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   child: ElevatedButton(
+                    //     ...
+                    //   ),
+                    // ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   // Step 3: Basic Setup
   Widget _buildBasicSetupStep() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final isWide = MediaQuery.of(context).size.width > 600;
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        const Text(
-          'Basic Setup',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent),
-        ),
-        const SizedBox(height: 18),
-        DropdownButtonFormField<String>(
-          value: _currency,
-          decoration: InputDecoration(
-            labelText: 'Currency',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-            filled: true,
-            fillColor: Colors.deepPurple[50],
+        // Animated gradient background (reuse onboarding background)
+        AnimatedContainer(
+          duration: const Duration(seconds: 2),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: _gradients[_gradientIndex],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-          items: _currencies
-              .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (val) => setState(() => _currency = val),
         ),
-        const SizedBox(height: 18),
-        DropdownButtonFormField<String>(
-          value: _location,
-          decoration: InputDecoration(
-            labelText: 'Location',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-            filled: true,
-            fillColor: Colors.deepPurple[50],
+        // Glassmorphism card with form
+        Center(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.18),
+                      blurRadius: 40,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 2.2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Basic Setup',
+                      style: TextStyle(
+                        fontFamily: 'Roboto-Bold',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurpleAccent,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 18),
+                    DropdownButtonFormField<String>(
+                      value: _currency,
+                      decoration: InputDecoration(
+                        labelText: 'Currency',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                        filled: true,
+                        fillColor: Colors.deepPurple[50],
+                        prefixIcon: const Icon(Icons.attach_money, color: Colors.deepPurpleAccent),
+                      ),
+                      items: _currencies
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e['code'],
+                                child: Row(
+                                  children: [
+                                    Text(e['symbol']!, style: const TextStyle(fontSize: 18)),
+                                    const SizedBox(width: 8),
+                                    Text(e['code']!),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (val) => setState(() => _currency = val),
+                    ),
+                    const SizedBox(height: 18),
+                    DropdownButtonFormField<String>(
+                      value: _location,
+                      decoration: InputDecoration(
+                        labelText: 'Location',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                        filled: true,
+                        fillColor: Colors.deepPurple[50],
+                        prefixIcon: const Icon(Icons.location_on, color: Colors.deepPurpleAccent),
+                      ),
+                      items: _locations
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e['country'],
+                                child: Row(
+                                  children: [
+                                    Text(e['flag']!, style: const TextStyle(fontSize: 20)),
+                                    const SizedBox(width: 8),
+                                    Text(e['country']!),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (val) => setState(() => _location = val),
+                    ),
+                    const SizedBox(height: 18),
+                    SwitchListTile(
+                      value: _prefersDark,
+                      onChanged: (val) => setState(() => _prefersDark = val),
+                      title: const Text('Enable Dark Mode'),
+                      activeColor: Colors.deepPurpleAccent,
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _currency != null && _location != null ? _nextStep : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurpleAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 8,
+                          shadowColor: Colors.deepPurple.withOpacity(0.2),
+                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('Continue', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          items: _locations
-              .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (val) => setState(() => _location = val),
-        ),
-        const SizedBox(height: 18),
-        SwitchListTile(
-          value: _prefersDark,
-          onChanged: (val) => setState(() => _prefersDark = val),
-          title: const Text('Enable Dark Mode'),
-          activeColor: Colors.deepPurpleAccent,
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _currency != null && _location != null ? _nextStep : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurpleAccent,
-            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          ),
-          child: const Text('Continue', style: TextStyle(fontSize: 16, color: Colors.white)),
         ),
       ],
     );
@@ -311,35 +648,147 @@ class _FirstTimeUserPromptState extends State<FirstTimeUserPrompt>
 
   // Step 4: Sample Data
   Widget _buildSampleDataStep() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final isWide = MediaQuery.of(context).size.width > 600;
+    // Mock sample data preview
+    final List<Map<String, String>> sampleProducts = [
+      {'name': 'Premium Rice', 'category': 'Groceries'},
+      {'name': 'Blue Denim Jeans', 'category': 'Clothing'},
+      {'name': 'Shea Butter Cream', 'category': 'Cosmetics'},
+      {'name': 'Wireless Earbuds', 'category': 'Electronics'},
+      {'name': 'Hammer', 'category': 'Hardware'},
+    ];
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        const Text(
-          'Sample Data',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent),
-        ),
-        const SizedBox(height: 18),
-        const Text(
-          'Would you like to load some demo data to explore the app?',
-          style: TextStyle(fontSize: 16),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 18),
-        SwitchListTile(
-          value: _loadSampleData,
-          onChanged: (val) => setState(() => _loadSampleData = val),
-          title: const Text('Load Demo Data'),
-          activeColor: Colors.deepPurpleAccent,
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _nextStep,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurpleAccent,
-            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        // Animated gradient background
+        AnimatedContainer(
+          duration: const Duration(seconds: 2),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: _gradients[_gradientIndex],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-          child: const Text('Continue', style: TextStyle(fontSize: 16, color: Colors.white)),
+        ),
+        // Glassmorphism card with sample data toggle and preview
+        Center(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.18),
+                      blurRadius: 40,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 2.2,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.info_outline, color: Colors.deepPurpleAccent),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'You can load sample data to explore the app. This will add a few demo products and categories. You can remove them later.',
+                            style: TextStyle(fontSize: 15, color: Colors.deepPurple, fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    SwitchListTile(
+                      value: _loadSampleData,
+                      onChanged: (val) => setState(() => _loadSampleData = val),
+                      title: const Text('Load Demo Data'),
+                      activeColor: Colors.deepPurpleAccent,
+                    ),
+                    if (_loadSampleData) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple[50],
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Sample Products:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 90,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: sampleProducts.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                itemBuilder: (context, i) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.deepPurple.withOpacity(0.08),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(sampleProducts[i]['name']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      Text(sampleProducts[i]['category']!, style: const TextStyle(fontSize: 13, color: Colors.deepPurple)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurpleAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 8,
+                          shadowColor: Colors.deepPurple.withOpacity(0.2),
+                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('Continue', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );

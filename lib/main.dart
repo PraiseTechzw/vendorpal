@@ -10,6 +10,7 @@ import 'package:vendorpal/themes/theme.dart';
 import 'package:vendorpal/constants/business_type_store.dart';
 import 'package:vendorpal/modals/business_type.dart';
 import 'package:vendorpal/widget/home/first_time_user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -71,6 +72,8 @@ class VendorPalApp extends StatefulWidget {
 }
 
 class _VendorPalAppState extends State<VendorPalApp> {
+  bool _showReset = false;
+
   @override
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
@@ -89,13 +92,30 @@ class _VendorPalAppState extends State<VendorPalApp> {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            return snapshot.data == false
-                ? FirstTimeUserPrompt()
-                : MainScreen();
+            if (snapshot.data == false) {
+              // Show onboarding as the ONLY content, full screen
+              return Scaffold(
+                body: FirstTimeUserPrompt(
+                  onComplete: () => setState(() {}),
+                ),
+                backgroundColor: Colors.transparent,
+              );
+            }
+            // Only show the main app after onboarding is complete
+            return Scaffold(
+              body: MainScreen(),
+              // Removed floatingActionButton for reset onboarding
+            );
           },
         ),
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Removed debug-only reset onboarding logic
   }
 }
 
