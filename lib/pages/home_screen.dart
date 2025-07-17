@@ -534,176 +534,192 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 700), // Prevents over-wide content
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DashboardHeader(
-                        businessName: businessName,
-                        businessTypeName: businessTypeName,
-                        brandingColor: brandingColor,
-                        greeting: greeting,
-                        now: now,
-                        notificationCount: _notifications.length,
-                        onNotificationTap: _showNotificationCenter,
-                      ),
-                      // --- Modern Dashboard Summary: Stock, Sales, Expenses ---
-                      const SizedBox(height: 8),
-                      _ModernSummaryRow(
-                        stock: _totalStock,
-                        sales: todayRevenue,
-                        expenses: todayStats['expenses'] ?? 0.0,
-                      ),
-                      const SizedBox(height: 24),
-                      // --- Primary Metrics ---
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isNarrow = constraints.maxWidth < 500;
-                          return isNarrow
-                              ? Column(
-                                  children: [
-                                    _PrimaryMetricCard(
-                                      label: "Today's Revenue",
-                                      value: todayRevenue,
-                                      icon: Icons.attach_money,
-                                      color: Colors.green,
-                                      subLabel: revenueChange > 0 ? '+${(revenueChange * 100).toStringAsFixed(1)}%' : '${(revenueChange * 100).toStringAsFixed(1)}%',
-                                      subLabelColor: revenueChange > 0 ? Colors.green : Colors.red,
-                                    ),
-                                    _PrimaryMetricCard(
-                                      label: 'Items Sold',
-                                      value: itemsSold.toDouble(),
-                                      icon: Icons.shopping_bag,
-                                      color: Colors.blue,
-                                      progress: itemsSold / itemsSoldGoal,
-                                      subLabel: '$itemsSoldGoal goal',
-                                      subLabelColor: Colors.blue,
-                                    ),
-                                    _PrimaryMetricCard(
-                                      label: 'Gross Profit',
-                                      value: grossProfit,
-                                      icon: Icons.trending_up,
-                                      color: Colors.purple,
-                                      subLabel: '${(profitMargin * 100).toStringAsFixed(0)}% margin',
-                                      subLabelColor: Colors.purple,
-                                    ),
-                                    _PrimaryMetricCard(
-                                      label: 'Transactions',
-                                      value: transactions.toDouble(),
-                                      icon: Icons.receipt_long,
-                                      color: Colors.orange,
-                                    ),
-                                  ],
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(child: _PrimaryMetricCard(
-                                      label: "Today's Revenue",
-                                      value: todayRevenue,
-                                      icon: Icons.attach_money,
-                                      color: Colors.green,
-                                      subLabel: revenueChange > 0 ? '+${(revenueChange * 100).toStringAsFixed(1)}%' : '${(revenueChange * 100).toStringAsFixed(1)}%',
-                                      subLabelColor: revenueChange > 0 ? Colors.green : Colors.red,
-                                    )),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: _PrimaryMetricCard(
-                                      label: 'Items Sold',
-                                      value: itemsSold.toDouble(),
-                                      icon: Icons.shopping_bag,
-                                      color: Colors.blue,
-                                      progress: itemsSold / itemsSoldGoal,
-                                      subLabel: '$itemsSoldGoal goal',
-                                      subLabelColor: Colors.blue,
-                                    )),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: _PrimaryMetricCard(
-                                      label: 'Gross Profit',
-                                      value: grossProfit,
-                                      icon: Icons.trending_up,
-                                      color: Colors.purple,
-                                      subLabel: '${(profitMargin * 100).toStringAsFixed(0)}% margin',
-                                      subLabelColor: Colors.purple,
-                                    )),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: _PrimaryMetricCard(
-                                      label: 'Transactions',
-                                      value: transactions.toDouble(),
-                                      icon: Icons.receipt_long,
-                                      color: Colors.orange,
-                                    )),
-                                  ],
-                                );
-                        },
-                      ),
-                      const SizedBox(height: 18),
-                      // --- Secondary Metrics ---
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          int crossAxisCount = constraints.maxWidth < 500 ? 1 : 2;
-                          return GridView.count(
-                            crossAxisCount: crossAxisCount,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 2.6,
-                            children: [
-                              _SecondaryMetricCard(
-                                label: 'Average Sale',
-                                value: avgSale,
-                                icon: Icons.calculate,
-                                color: Colors.teal,
-                              ),
-                              _SecondaryMetricCard(
-                                label: 'Best Selling',
-                                value: bestSellingQty.toDouble(),
-                                icon: Icons.star,
-                                color: Colors.amber,
-                                subLabel: bestSelling,
-                              ),
-                            
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      const SizedBox(height: 14),
-                     
-                      const SizedBox(height: 24),
-                      // --- Business-Type-Specific Widgets ---
-                      _buildBusinessTypeWidgets(),
-                      const SizedBox(height: 24),
-                      // --- Smart Analytics Panel ---
-                      _SmartAnalyticsPanel(),
-                      const SizedBox(height: 24),
-                      // Recent Activity
-                      const Text('Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18), overflow: TextOverflow.ellipsis, maxLines: 1),
-                      const SizedBox(height: 10),
-                      ...recentActivity.map((item) => Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          leading: Icon(
-                            item['type'] == 'sale' ? Icons.sell : item['type'] == 'stock' ? Icons.inventory : Icons.money_off,
-                            color: item['type'] == 'sale' ? Colors.deepPurpleAccent : item['type'] == 'stock' ? Colors.green : Colors.orange,
-                          ),
-                          title: Text(item['desc']!, overflow: TextOverflow.ellipsis, maxLines: 1),
-                          subtitle: Text(item['time']!, overflow: TextOverflow.ellipsis, maxLines: 1),
+          if (_isLoading)
+            // --- Loading State ---
+            const Center(child: CircularProgressIndicator()),
+          if (!_isLoading && _totalStock == 0)
+            // --- Empty State ---
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.inbox, size: 64, color: Colors.deepPurpleAccent),
+                  SizedBox(height: 18),
+                  Text('No data yet', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text('Add your first product or sale to get started!', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+          if (!_isLoading && _totalStock > 0)
+            // --- Main Dashboard Content ---
+            SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DashboardHeader(
+                          businessName: businessName,
+                          businessTypeName: businessTypeName,
+                          brandingColor: brandingColor,
+                          greeting: greeting,
+                          now: now,
+                          notificationCount: _notifications.length,
+                          onNotificationTap: _showNotificationCenter,
                         ),
-                      )),
-                      // Add more sections as needed
-                    ],
+                        // --- Modern Dashboard Summary: Stock, Sales, Expenses ---
+                        const SizedBox(height: 8),
+                        _ModernSummaryRow(
+                          stock: _totalStock,
+                          sales: todayRevenue,
+                          expenses: todayStats['expenses'] ?? 0.0,
+                        ),
+                        const SizedBox(height: 24),
+                        // --- Primary Metrics ---
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isNarrow = constraints.maxWidth < 500;
+                            return isNarrow
+                                ? Column(
+                                    children: [
+                                      _PrimaryMetricCard(
+                                        label: "Today's Revenue",
+                                        value: todayRevenue,
+                                        icon: Icons.attach_money,
+                                        color: Colors.green,
+                                        subLabel: revenueChange > 0 ? '+${(revenueChange * 100).toStringAsFixed(1)}%' : '${(revenueChange * 100).toStringAsFixed(1)}%',
+                                        subLabelColor: revenueChange > 0 ? Colors.green : Colors.red,
+                                      ),
+                                      _PrimaryMetricCard(
+                                        label: 'Items Sold',
+                                        value: itemsSold.toDouble(),
+                                        icon: Icons.shopping_bag,
+                                        color: Colors.blue,
+                                        progress: itemsSold / itemsSoldGoal,
+                                        subLabel: '$itemsSoldGoal goal',
+                                        subLabelColor: Colors.blue,
+                                      ),
+                                      _PrimaryMetricCard(
+                                        label: 'Gross Profit',
+                                        value: grossProfit,
+                                        icon: Icons.trending_up,
+                                        color: Colors.purple,
+                                        subLabel: '${(profitMargin * 100).toStringAsFixed(0)}% margin',
+                                        subLabelColor: Colors.purple,
+                                      ),
+                                      _PrimaryMetricCard(
+                                        label: 'Transactions',
+                                        value: transactions.toDouble(),
+                                        icon: Icons.receipt_long,
+                                        color: Colors.orange,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(child: _PrimaryMetricCard(
+                                        label: "Today's Revenue",
+                                        value: todayRevenue,
+                                        icon: Icons.attach_money,
+                                        color: Colors.green,
+                                        subLabel: revenueChange > 0 ? '+${(revenueChange * 100).toStringAsFixed(1)}%' : '${(revenueChange * 100).toStringAsFixed(1)}%',
+                                        subLabelColor: revenueChange > 0 ? Colors.green : Colors.red,
+                                      )),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: _PrimaryMetricCard(
+                                        label: 'Items Sold',
+                                        value: itemsSold.toDouble(),
+                                        icon: Icons.shopping_bag,
+                                        color: Colors.blue,
+                                        progress: itemsSold / itemsSoldGoal,
+                                        subLabel: '$itemsSoldGoal goal',
+                                        subLabelColor: Colors.blue,
+                                      )),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: _PrimaryMetricCard(
+                                        label: 'Gross Profit',
+                                        value: grossProfit,
+                                        icon: Icons.trending_up,
+                                        color: Colors.purple,
+                                        subLabel: '${(profitMargin * 100).toStringAsFixed(0)}% margin',
+                                        subLabelColor: Colors.purple,
+                                      )),
+                                      const SizedBox(width: 8),
+                                      Expanded(child: _PrimaryMetricCard(
+                                        label: 'Transactions',
+                                        value: transactions.toDouble(),
+                                        icon: Icons.receipt_long,
+                                        color: Colors.orange,
+                                      )),
+                                    ],
+                                  );
+                          },
+                        ),
+                        const SizedBox(height: 18),
+                        // --- Secondary Metrics ---
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            int crossAxisCount = constraints.maxWidth < 500 ? 1 : 2;
+                            return GridView.count(
+                              crossAxisCount: crossAxisCount,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 2.6,
+                              children: [
+                                _SecondaryMetricCard(
+                                  label: 'Average Sale',
+                                  value: avgSale,
+                                  icon: Icons.calculate,
+                                  color: Colors.teal,
+                                ),
+                                _SecondaryMetricCard(
+                                  label: 'Best Selling',
+                                  value: bestSellingQty.toDouble(),
+                                  icon: Icons.star,
+                                  color: Colors.amber,
+                                  subLabel: bestSelling,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
+                        const SizedBox(height: 24),
+                        // --- Business-Type-Specific Widgets ---
+                        _buildBusinessTypeWidgets(),
+                        const SizedBox(height: 24),
+                        // --- Smart Analytics Panel ---
+                        _SmartAnalyticsPanel(),
+                        const SizedBox(height: 24),
+                        // Recent Activity
+                        const Text('Recent Activity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18), overflow: TextOverflow.ellipsis, maxLines: 1),
+                        const SizedBox(height: 10),
+                        ...recentActivity.map((item) => Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: ListTile(
+                            leading: Icon(
+                              item['type'] == 'sale' ? Icons.sell : item['type'] == 'stock' ? Icons.inventory : Icons.money_off,
+                              color: item['type'] == 'sale' ? Colors.deepPurpleAccent : item['type'] == 'stock' ? Colors.green : Colors.orange,
+                            ),
+                            title: Text(item['desc']!, overflow: TextOverflow.ellipsis, maxLines: 1),
+                            subtitle: Text(item['time']!, overflow: TextOverflow.ellipsis, maxLines: 1),
+                          ),
+                        )),
+                        // Add more sections as needed
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           // Contextual overlay (tip/alert/achievement/help)
           if (_notifications.isNotEmpty)
             DashboardOverlay(
@@ -929,29 +945,59 @@ class _ModernSummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _SummaryCard(
-          label: 'Stock',
-          value: stock.toString(),
-          icon: Icons.inventory_2,
-          color: Colors.blueAccent,
-          gradient: cardGradient,
-          secondary: 'In store',
+        AnimatedSlide(
+          offset: const Offset(-0.2, 0),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 600),
+            child: _SummaryCard(
+              label: 'Stock',
+              value: stock.toString(),
+              icon: Icons.inventory_2,
+              color: Colors.blueAccent,
+              gradient: cardGradient,
+              secondary: 'In store',
+              semanticLabel: 'Stock in store: $stock',
+            ),
+          ),
         ),
-        _SummaryCard(
-          label: 'Sales',
-          value: sales.toStringAsFixed(2),
-          icon: Icons.attach_money,
-          color: Colors.green,
-          gradient: cardGradient,
-          secondary: 'Today',
+        AnimatedSlide(
+          offset: const Offset(0, 0.2),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 700),
+            child: _SummaryCard(
+              label: 'Sales',
+              value: sales.toStringAsFixed(2),
+              icon: Icons.attach_money,
+              color: Colors.green,
+              gradient: cardGradient,
+              secondary: 'Today',
+              semanticLabel: 'Sales today: $sales',
+            ),
+          ),
         ),
-        _SummaryCard(
-          label: 'Expenses',
-          value: expenses.toStringAsFixed(2),
-          icon: Icons.money_off,
-          color: Colors.redAccent,
-          gradient: cardGradient,
-          secondary: 'Today',
+        AnimatedSlide(
+          offset: const Offset(0.2, 0),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 800),
+            child: _SummaryCard(
+              label: 'Expenses',
+              value: expenses.toStringAsFixed(2),
+              icon: Icons.money_off,
+              color: Colors.redAccent,
+              gradient: cardGradient,
+              secondary: 'Today',
+              semanticLabel: 'Expenses today: $expenses',
+            ),
+          ),
         ),
       ],
     );
@@ -965,45 +1011,49 @@ class _SummaryCard extends StatelessWidget {
   final Color color;
   final Gradient gradient;
   final String secondary;
-  const _SummaryCard({required this.label, required this.value, required this.icon, required this.color, required this.gradient, required this.secondary});
+  final String? semanticLabel;
+  const _SummaryCard({required this.label, required this.value, required this.icon, required this.color, required this.gradient, required this.secondary, this.semanticLabel});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.10),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          border: Border.all(color: color.withOpacity(0.13), width: 1.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: color)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-            const SizedBox(height: 2),
-            Text(secondary, style: TextStyle(fontSize: 12, color: color.withOpacity(0.7))),
-          ],
+    return Semantics(
+      label: semanticLabel ?? label,
+      child: Expanded(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.10),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(color: color.withOpacity(0.13), width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 32),
+              const SizedBox(height: 8),
+              Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: color)),
+              const SizedBox(height: 4),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(secondary, style: TextStyle(fontSize: 12, color: color.withOpacity(0.7))),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// --- Smart Analytics Panel Widget ---
+// --- Animate Analytics Panel ---
 class _SmartAnalyticsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -1012,82 +1062,89 @@ class _SmartAnalyticsPanel extends StatelessWidget {
     final String bestSelling = 'Premium Rice';
     final String topCategory = 'Staples';
     final String insight = 'Sales peak on Fridays. Consider special offers!';
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      child: Container(
-        decoration: modernCardDecoration(color: Colors.deepPurple, borderRadius: 22),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.analytics, color: Colors.deepPurpleAccent, size: 28),
-                SizedBox(width: 10),
-                Text('Smart Analytics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // --- Sales Trend Chart (mock, simple bar chart) ---
-            SizedBox(
-              height: 80,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: salesTrend.map((v) {
-                  final max = salesTrend.reduce((a, b) => a > b ? a : b);
-                  return Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      height: 60 * (v / (max + 0.01)),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurpleAccent.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AnimatedOpacity(
+      opacity: 1.0,
+      duration: const Duration(milliseconds: 900),
+      child: Semantics(
+        label: 'Smart Analytics Panel. Best seller: $bestSelling. Top category: $topCategory.',
+        child: Card(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          child: Container(
+            decoration: modernCardDecoration(color: Colors.deepPurple, borderRadius: 22),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _AnalyticsStat(
-                  icon: Icons.star,
-                  label: 'Best Seller',
-                  value: bestSelling,
-                  color: Colors.amber,
+                Row(
+                  children: const [
+                    Icon(Icons.analytics, color: Colors.deepPurpleAccent, size: 28),
+                    SizedBox(width: 10),
+                    Text('Smart Analytics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  ],
                 ),
-                _AnalyticsStat(
-                  icon: Icons.category,
-                  label: 'Top Category',
-                  value: topCategory,
-                  color: Colors.blueAccent,
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.lightbulb, color: Colors.green, size: 20),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            insight,
-                            style: const TextStyle(fontSize: 13, color: Colors.black87),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 16),
+                // --- Sales Trend Chart (mock, simple bar chart) ---
+                SizedBox(
+                  height: 80,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: salesTrend.map((v) {
+                      final max = salesTrend.reduce((a, b) => a > b ? a : b);
+                      return Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          height: 60 * (v / (max + 0.01)),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurpleAccent.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _AnalyticsStat(
+                      icon: Icons.star,
+                      label: 'Best Seller',
+                      value: bestSelling,
+                      color: Colors.amber,
+                    ),
+                    _AnalyticsStat(
+                      icon: Icons.category,
+                      label: 'Top Category',
+                      value: topCategory,
+                      color: Colors.blueAccent,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lightbulb, color: Colors.green, size: 20),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                insight,
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

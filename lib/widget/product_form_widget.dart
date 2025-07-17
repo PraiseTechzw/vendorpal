@@ -490,11 +490,11 @@ class _ProductFormWidgetState extends State<ProductFormWidget> {
           if (picked != null) onChanged(picked);
         },
         child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: labelText,
-            prefixIcon: Icon(icon, color: Colors.deepPurpleAccent),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15.0),
+        decoration: InputDecoration(
+          labelText: labelText,
+          prefixIcon: Icon(icon, color: Colors.deepPurpleAccent),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15.0),
             ),
           ),
           child: Row(
